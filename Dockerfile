@@ -1,5 +1,3 @@
-# ninjaben/matlab-support
-# 
 # Create an image with enough dependencies to support a mounted-in matlab.
 #
 # These expect you to define some local information:
@@ -16,22 +14,25 @@
 # Plot a figure and save it as a png in the logs folder:
 # docker run --rm -v "$MATLAB_ROOT":/usr/local/MATLAB/from-host -v "$MATLAB_LOGS":/var/log/matlab --mac-address="$MATLAB_MAC_ADDRESS" ninjaben/matlab-support -r "plot(1:10);print('/var/log/matlab/figure.png', '-dpng');exit;"
 #
-#Thanks to Michael Perry at Stanford for info, inspiration, starter code!
-#
 
-FROM ubuntu:14.04
+FROM registry.fedoraproject.org/fedora:latest
 
-MAINTAINER Ben Heasly <benjamin.heasly@gmail.com>
+MAINTAINER Jacob Holtom <jacob@holtom.me>
+
+ARG MATLAB_USER=jholtom
 
 # Matlab dependencies
-RUN apt-get update && apt-get install -y \
-    libpng12-dev libfreetype6-dev \
-    libblas-dev liblapack-dev gfortran build-essential xorg
+RUN dnf -y update && dnf -y install libpng12-devel freetype-devel blas-devel lapack-devel libXt
+RUN dnf clean all && rm -rf /var/cache/yum
 
-# run the container like a matlab executable 
+RUN useradd -ms /bin/bash $MATLAB_USER -G wheel && echo "$MATLAB_USER:$MATLAB_USER" | chpasswd
+RUN echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+USER $MATLAB_USER
+
+# run the container like a matlab executable
 ENV PATH="/usr/local/MATLAB/from-host/bin:${PATH}"
 ENTRYPOINT ["matlab", "-logfile /var/log/matlab/matlab.log"]
 
 # default to matlab help
 CMD ["-h"]
-
